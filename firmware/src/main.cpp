@@ -1,8 +1,9 @@
+#include <Arduino.h>
 #include "pins.h"
-#include <SPI.h>
-#include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <SPI.h>
+#include <Wire.h>
 
 #define TEXT_SIZE 2
 #define VISIBLE_PIXELS 128
