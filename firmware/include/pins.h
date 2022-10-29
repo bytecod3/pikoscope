@@ -12,6 +12,7 @@
 
 // pins for channel inputs
 #define CH1 A0
+#define Y_SPANNER A1    // holds the potentiometer to use in spanning in the y-axis
 
 // other features
 #define SCREEN_HOLD 4  // freeze the screen
@@ -22,7 +23,9 @@
 #define SCREEN_ADDRESS 0x3C
 #define MIDPOINT_Y (SCREEN_HEIGHT/2)
 #define MIDPOINT_X (SCREEN_WIDTH/2)
+#define SCREEN_OFFSET 15   // reserved 15 px at the top for displaying signal parameters
 #define GRID_DASH_ENABLE 0 // draw dashed grids
+
 
 // pin definitions for rotary encoder
 #define ENC_BUTTON 7

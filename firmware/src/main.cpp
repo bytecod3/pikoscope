@@ -17,6 +17,12 @@ unsigned long sample_start_time = 0; // store the moment when the current sampli
 unsigned long total_sample_time;
 int sample_rate = 1; // sample once every time through the loop
 
+// mapping the input channel values for y-axis spanning
+uint8_t current_pot_value = 0;
+uint8_t previous_pot_value = 0;
+uint8_t potentiometer_change; // find the change that has occured in turning the potentiometer value
+float scale_factor = 0.005;
+float change_factor, decrease_factor;
 uint8_t ch1_val_mapped;
 
 // menu and encoder variables
@@ -47,18 +53,17 @@ void drawGrid(){
   display.clearDisplay();
 
   // draw a plus at the midpoint
-  if(GRID_DASH_ENABLE){
-    display.drawFastHLine(MIDPOINT_X-4, (uint8_t)(SCREEN_HEIGHT+15)/2, 8, WHITE);
-    display.drawFastVLine(MIDPOINT_X, ((SCREEN_HEIGHT+16)/2)-(8/2), 8, WHITE);
 
-    display.drawFastHLine(0, ((uint8_t)(SCREEN_HEIGHT+15)/2), SCREEN_WIDTH, WHITE);
-    display.drawFastVLine(MIDPOINT_X, 16, SCREEN_HEIGHT-16, WHITE);
+  display.drawFastHLine(MIDPOINT_X-4, (uint8_t)(SCREEN_HEIGHT+15)/2, 8, WHITE);
+  display.drawFastVLine(MIDPOINT_X, ((SCREEN_HEIGHT+16)/2)-(8/2), 8, WHITE);
 
-    // draw ticks on the horizontal axis
-    for(size_t x = 0; x < 128; x++){
-      if((x%16) == 0){
-        display.drawFastVLine(x, (uint8_t)(SCREEN_HEIGHT+15)/2 -2, 4, WHITE);
-      }
+  display.drawFastHLine(0, ((uint8_t)(SCREEN_HEIGHT+15)/2), SCREEN_WIDTH, WHITE);
+  display.drawFastVLine(MIDPOINT_X, 16, SCREEN_HEIGHT-16, WHITE);
+
+  // draw ticks on the horizontal axis
+  for(size_t x = 0; x < 128; x++){
+    if((x%16) == 0){
+      display.drawFastVLine(x, (uint8_t)(SCREEN_HEIGHT+15)/2 -2, 4, WHITE);
     }
   }
 
@@ -73,6 +78,33 @@ void drawGrid(){
   display.drawFastHLine(MIDPOINT_X, 57 - 2, 4, WHITE);
 
   display.display();
+}
+
+
+uint8_t span_y(uint8_t magnitude){
+    /*
+    Y-axis magnitude spanning algorithm
+    */
+
+    // read the potentiometer
+    current_pot_value = analogRead(Y_SPANNER);
+    current_pot_value = map(current_pot_value, 0, 255, 16, 63);
+
+    //potentiometer_change = current_pot_value - previous_pot_value;
+    // Serial.println(potentiometer_change);
+    
+    // decrease/ increase factor
+    // Minimum signal displayed = 2mV
+    // maximum = 5000V == 5V
+    // difference  = 4998mV
+    // for 1K-Ohm pot, 1 Ohm == ~5mV
+
+    change_factor = current_pot_value  * scale_factor;
+    magnitude = magnitude * change_factor;
+    // Serial.print("Mag: ");
+    // Serial.println(magnitude);
+
+    return magnitude;
 }
 
 void drawValues(){
@@ -100,7 +132,9 @@ void drawValues(){
   }
 
   for(int h = 0; h < VISIBLE_PIXELS; h++){
-    display.drawPixel(h, 79 - (ch1[h + start]), WHITE); //79 offsets the upper 16 px reserved for displaying signal parameters
+    uint8_t value_to_render =  span_y(ch1[h + start]);
+    //display.drawPixel(h, 79 - (value_to_render), WHITE); //79 offsets the upper 16 px reserved for displaying signal parameters
+    display.drawPixel(h, 15 + value_to_render, WHITE);
   }
 
 }
@@ -164,6 +198,7 @@ void setup() {
   pinMode(ENC_BUTTON, INPUT_PULLUP);
   pinMode(ENC_STEP, INPUT_PULLUP);
   pinMode(ENC_DIRECTION, INPUT_PULLUP);
+  pinMode(Y_SPANNER, INPUT);
 
   // attach interrupts for rotary encoder menu display
   // user can rotate the menu clockwise or anticlockwise, so monitor for a change
@@ -174,13 +209,15 @@ void setup() {
 }
 
 void loop() {
+
   // record start time of the sampling
   if(i == 0)
     sample_start_time = micros();
 
   // do the actual sampling
-  if((++count) % sample_rate == 0 ) // take sample for this iteration
+  if((++count) % sample_rate == 0 ){ // take sample for this iteration
     ch1[i++] = map(analogRead(CH1), 0, 1023, 16, 63); // map the value to fit on screen
+  }
 
   // if the buffer is full, draw on the screen
   if(i >= BUFFER_SIZE){
