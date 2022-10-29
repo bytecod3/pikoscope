@@ -20,6 +20,13 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define SCREEN_ADDRESS 0x3C
+#define MIDPOINT_Y (SCREEN_HEIGHT/2)
+#define MIDPOINT_X (SCREEN_WIDTH/2)
+#define GRID_DASH_ENABLE 0 // draw dashed grids
 
+// pin definitions for rotary encoder
+#define ENC_BUTTON 7
+#define ENC_STEP    2
+#define ENC_DIRECTION   3   // this pin supports interrupts on atmega
 
 #endif

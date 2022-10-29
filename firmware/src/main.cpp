@@ -19,6 +19,14 @@ int sample_rate = 1; // sample once every time through the loop
 
 uint8_t ch1_val_mapped;
 
+// menu and encoder variables
+volatile byte a_flag = 0;
+volatile byte b_flag = 0;
+volatile uint16_t encoder_position = 0;
+volatile uint16_t old_encoder_position = 0;
+volatile byte encoder_reading;  // store read values for later comparison
+
+
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 
 void displayln(const char* format, ...){
@@ -38,15 +46,32 @@ void displayln(const char* format, ...){
 void drawGrid(){
   display.clearDisplay();
 
-  display.drawLine(0, 16, 0, 64, WHITE); // vertical axis
-  display.drawLine(0, 63, 128, 63, WHITE); // horizontal axis
+  // draw a plus at the midpoint
+  if(GRID_DASH_ENABLE){
+    display.drawFastHLine(MIDPOINT_X-4, (uint8_t)(SCREEN_HEIGHT+15)/2, 8, WHITE);
+    display.drawFastVLine(MIDPOINT_X, ((SCREEN_HEIGHT+16)/2)-(8/2), 8, WHITE);
 
-  display.drawFastHLine(0, 16, 3, WHITE);
-  display.drawFastHLine(0, 24, 3, WHITE);
-  display.drawFastHLine(0, 33, 3, WHITE);
-  display.drawFastHLine(0, 42, 3, WHITE);
-  display.drawFastHLine(0, 51, 3, WHITE);
+    display.drawFastHLine(0, ((uint8_t)(SCREEN_HEIGHT+15)/2), SCREEN_WIDTH, WHITE);
+    display.drawFastVLine(MIDPOINT_X, 16, SCREEN_HEIGHT-16, WHITE);
+
+    // draw ticks on the horizontal axis
+    for(size_t x = 0; x < 128; x++){
+      if((x%16) == 0){
+        display.drawFastVLine(x, (uint8_t)(SCREEN_HEIGHT+15)/2 -2, 4, WHITE);
+      }
+    }
+  }
+
+  // draw ticks on the vertical axis
+  // upper half. Each div is 9.2px, to give me 2.5 divisions on the upper half
+  // 2.5 x 2 = 5V which is the p-p voltage capability of this piko-scope
+  display.drawFastHLine(MIDPOINT_X, 30 - 2, 4, WHITE);
+  display.drawFastHLine(MIDPOINT_X, 21 - 2, 4, WHITE);
   
+  // lower half
+  display.drawFastHLine(MIDPOINT_X, 48 - 2, 4, WHITE);
+  display.drawFastHLine(MIDPOINT_X, 57 - 2, 4, WHITE);
+
   display.display();
 }
 
@@ -93,6 +118,32 @@ void drawParams(unsigned long time){
   
 }
 
+void staticMenu(){
+  /*
+  Display a static menu when the device is first powered
+  */
+
+}
+
+// void runMenu(){
+//   /*
+//   ISR routine
+//   Run this function when encoder is rotated 
+//   If normal signal sampling is being done, interrupt the signal display and show menu
+//   */
+
+//   cli();  // stop interrupts happenning
+//   Serial.println("Menu called");
+
+//   display.clearDisplay();
+
+//   display.writePixel("Menu", 0, 0);
+
+//   display.display();
+
+//   sei(); // resume interrupts
+// }
+
 void setup() {
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
@@ -110,6 +161,16 @@ void setup() {
 
   // pin mode setups
   pinMode(CH1, INPUT);
+  pinMode(ENC_BUTTON, INPUT_PULLUP);
+  pinMode(ENC_STEP, INPUT_PULLUP);
+  pinMode(ENC_DIRECTION, INPUT_PULLUP);
+
+  // attach interrupts for rotary encoder menu display
+  // user can rotate the menu clockwise or anticlockwise, so monitor for a change
+  // attachInterrupt(digitalPinToInterrupt(ENC_DIRECTION), runMenu, RISING);
+  // attachInterrupt(digitalPinToInterrupt(ENC_STEP), runMenu, RISING);
+
+
 }
 
 void loop() {
